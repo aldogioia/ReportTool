@@ -1,5 +1,6 @@
 import org.jdatepicker.impl.JDatePickerImpl;
 import utils.DatePickerInitializer;
+import utils.MessageCode;
 
 import javax.swing.*;
 import java.awt.*;
@@ -179,12 +180,18 @@ public class ReportToolGui extends JFrame {
 
                 String headerLine = "Date;Screen;Creative;Impressions;Spend";
 
-                ExcelHandler.writeExcelWithInfo(
+                MessageCode code = ExcelHandler.writeExcelWithInfo(
                         campaignNameText,
                         infoLines,
                         headerLine,
                         dataLines
                 );
+
+                if (code == MessageCode.OK) {
+                    JOptionPane.showMessageDialog(this, "Report generato con successo!", "Successo", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Errore nella generazione del report.", "Errore", JOptionPane.ERROR_MESSAGE);
+                }
 
             } catch (NumberFormatException e) {
                 JOptionPane.showMessageDialog(this, "Impossibile convertire le date", "Errore", JOptionPane.ERROR_MESSAGE);

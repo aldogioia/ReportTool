@@ -1,5 +1,6 @@
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import utils.MessageCode;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -9,7 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class ExcelHandler {
-    public static void writeExcelWithInfo(
+    public static MessageCode writeExcelWithInfo(
             String campaignName,
             List<String> infoLines,
             String headerLine,
@@ -46,9 +47,10 @@ public class ExcelHandler {
             }
 
             workbook.write(fos);
-
+            return MessageCode.OK;
         } catch (IOException e) {
             System.err.println("Errore nella scrittura Excel: " + e.getMessage());
+            return MessageCode.ERROR;
         }
     }
 
