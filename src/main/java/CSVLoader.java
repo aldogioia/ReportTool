@@ -1,8 +1,4 @@
-import utils.Constants;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 public class CSVLoader {
@@ -26,7 +22,10 @@ public class CSVLoader {
 
     private Map<String, Long> loadDataScreen() {
         Map<String, Long> map = new HashMap<>();
-        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(Constants.DATA_SCREEN_FILE))) {
+        try (BufferedReader bufferedReader = new BufferedReader(
+                new InputStreamReader(Objects.requireNonNull(
+                        getClass().getClassLoader().getResourceAsStream("data_screen.csv"))))
+        ) {
            String row;
            while ((row = bufferedReader.readLine()) != null) {
                String[] values = row.split(";");
