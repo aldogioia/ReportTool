@@ -10,14 +10,24 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class ExcelHandler {
-    public static MessageCode writeExcelWithInfo(
+    /**
+     * Writes an Excel file with the provided campaign name, info lines, header line, and data lines.
+     *
+     * @param campaignName  Name of the campaign
+     * @param infoLines     List of strings containing general information
+     * @param headerLine    String containing the header line, separated by semicolons
+     * @param dataLines     List of strings containing the data lines
+     * @return MessageCode indicating success or error
+     */
+
+    public static MessageCode writeExcel(
             String campaignName,
             List<String> infoLines,
             String headerLine,
             List<String> dataLines
     ) {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("dd_MM_yyyy"));
-        String fileName = "report_" + campaignName + "_" + date + ".xlsx";
+        String fileName = "report_" + String.join(" ", campaignName) + "_" + date + ".xlsx";
         String outputFilePath = System.getProperty("user.home") + File.separator + "Downloads" + File.separator + fileName;
 
         try (

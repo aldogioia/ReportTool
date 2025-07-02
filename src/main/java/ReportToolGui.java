@@ -6,6 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,11 +16,14 @@ public class ReportToolGui extends JFrame {
     private JDatePickerImpl startDatePicker;
     private JDatePickerImpl endDatePicker;
     private JTextField txtCpm, txtImpressionsGoal, txtCampaignName;
+    private JLabel impressionsLabel;
+    private final List<String> creativeList = new ArrayList<>();
+    private JLabel creativeLabel;
     private final Map<String, JCheckBox> CheckBoxMap = new HashMap<>();
 
     public ReportToolGui() {
         setTitle("Strumento di Reportistica");
-        setSize(900, 550);
+        setSize(900, 600);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         initUI();
@@ -39,6 +44,7 @@ public class ReportToolGui extends JFrame {
         panel.add(new JLabel("Data inizio:"), gbc);
         gbc.gridx = 1;
         startDatePicker = DatePickerInitializer.createDatePicker();
+        startDatePicker.getJFormattedTextField().addPropertyChangeListener("value", _ -> updateImpressionsLabel());
         panel.add(startDatePicker, gbc);
         y++;
 
@@ -47,6 +53,7 @@ public class ReportToolGui extends JFrame {
         panel.add(new JLabel("Data fine:"), gbc);
         gbc.gridx = 1;
         endDatePicker = DatePickerInitializer.createDatePicker();
+        endDatePicker.getJFormattedTextField().addPropertyChangeListener("value", _ -> updateImpressionsLabel());
         panel.add(endDatePicker, gbc);
         y++;
 
@@ -60,7 +67,8 @@ public class ReportToolGui extends JFrame {
 
         // Impressions Goal
         gbc.gridx = 0; gbc.gridy = y;
-        panel.add(new JLabel("Impressions:"), gbc);
+        impressionsLabel = new JLabel("Impressions:");
+        panel.add(impressionsLabel, gbc);
         gbc.gridx = 1;
         txtImpressionsGoal = new JTextField("0");
         panel.add(txtImpressionsGoal, gbc);
@@ -74,6 +82,47 @@ public class ReportToolGui extends JFrame {
         panel.add(txtCampaignName, gbc);
         y++;
 
+        // Creative
+        creativeLabel = new JLabel("Creative: ");
+        gbc.gridx = 0; gbc.gridy = y;
+        gbc.gridwidth = 2;
+        panel.add(creativeLabel, gbc);
+        y++;
+
+        JPanel creativePanel = new JPanel(new BorderLayout());
+        JTextField txtCreative = new JTextField();
+        JButton btnAddCreative = new JButton("Aggiungi");
+        JButton btnDeleteCreative = new JButton("Elimina");
+
+        creativePanel.add(txtCreative, BorderLayout.CENTER);
+        creativePanel.add(btnAddCreative, BorderLayout.WEST);
+        creativePanel.add(btnDeleteCreative, BorderLayout.EAST);
+
+        gbc.gridx = 0; gbc.gridy = y;
+        gbc.gridwidth = 2;
+        panel.add(creativePanel, gbc);
+        y++;
+
+        // Bottone aggiungi creative
+        btnAddCreative.addActionListener(_ -> {
+            String name = txtCreative.getText().trim();
+            if (!name.isEmpty() && !creativeList.contains(name)) {
+                creativeList.add(name);
+                updateCreativeLabel();
+                txtCreative.setText("");
+            }
+        });
+
+        // Bottone rimuovi creative
+        btnDeleteCreative.addActionListener(_ -> {
+            if (!creativeList.isEmpty()) {
+                creativeList.removeLast();
+                updateCreativeLabel();
+                txtCreative.setText("");
+            }
+        });
+
+
         // Schermi
         gbc.gridx = 0; gbc.gridy = y;
         gbc.gridwidth = 2;
@@ -81,9 +130,10 @@ public class ReportToolGui extends JFrame {
         y++;
 
         JPanel screenPanel = new JPanel(new GridLayout(0, 2));
-        for (Map.Entry<String, Integer> entry : CSVLoader.getInstance().getDataScreen().entrySet()) {
+        for (Map.Entry<String, Long> entry : CSVLoader.getInstance().getDataScreen().entrySet()) {
             JCheckBox checkBox = new JCheckBox(entry.getKey());
             checkBox.setSelected(true);
+            checkBox.addItemListener(_ -> updateImpressionsLabel());
             screenPanel.add(checkBox);
             CheckBoxMap.put(entry.getKey(), checkBox);
         }
@@ -93,32 +143,53 @@ public class ReportToolGui extends JFrame {
         panel.add(screenPanel, gbc);
         y++;
 
-        // Bottoni
-        JButton btnLoad = new JButton("Carica Creative");
-        JButton btnReport = new JButton("Genera Report");
-
         gbc.gridx = 0; gbc.gridy = y;
-        gbc.gridwidth = 1;
-        panel.add(btnLoad, gbc);
-        gbc.gridx = 1;
+        JButton btnReport = new JButton("Genera Report");
+        gbc.gridwidth = 2;
         panel.add(btnReport, gbc);
 
         add(panel);
 
-        btnLoad.addActionListener(this::handleLoad);
         btnReport.addActionListener(this::handleReport);
     }
 
-    private void handleLoad(ActionEvent e) {
-        JFileChooser chooser = new JFileChooser();
-        int result = chooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            try {
-                CSVLoader.getInstance().loadCreatives(chooser.getSelectedFile());
-                JOptionPane.showMessageDialog(this, "Creative caricate con successo!", "Successo", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Errore nel caricamento dei dati: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
-            }
+    private void updateCreativeLabel() {
+        String joined = String.join(", ", creativeList);
+        creativeLabel.setText("Creative: " + joined);
+    }
+
+
+    private void updateImpressionsLabel() {
+        List<String> selectedScreens = CheckBoxMap.entrySet().stream()
+                .filter(entry -> entry.getValue().isSelected())
+                .map(Map.Entry::getKey)
+                .toList();
+
+        String startDateStr = startDatePicker.getJFormattedTextField().getText();
+        String endDateStr = endDatePicker.getJFormattedTextField().getText();
+
+        if (startDateStr.isEmpty() || endDateStr.isEmpty()) {
+            impressionsLabel.setText("Impressions:");
+            return;
+        }
+
+        try {
+            LocalDate start = LocalDate.parse(startDateStr);
+            LocalDate end = LocalDate.parse(endDateStr);
+
+            long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+            double weeks = days / 7.0;
+
+            long totalEstimated = selectedScreens.stream()
+                    .mapToLong(screen -> {
+                        Long weekly = CSVLoader.getInstance().getDataScreen().getOrDefault(screen, 0L);
+                        return Math.round(weekly * weeks);
+                    })
+                    .sum();
+
+            impressionsLabel.setText("Impressions: " + totalEstimated);
+        } catch (Exception ex) {
+            impressionsLabel.setText("Impressions:");
         }
     }
 
@@ -143,7 +214,7 @@ public class ReportToolGui extends JFrame {
             return;
         }
 
-        if (CSVLoader.getInstance().getCreatives().isEmpty()){
+        if (creativeList.isEmpty()){
             JOptionPane.showMessageDialog(this, "È obbligatorio caricare le creative.", "Errore", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -151,6 +222,12 @@ public class ReportToolGui extends JFrame {
         try {
             double cpm = Double.parseDouble(cpmText);
             int impressionsGoal = Integer.parseInt(impressionsGoalText);
+            int impressionsEstimated = Integer.parseInt(impressionsLabel.getText().substring(13));
+
+            if (impressionsGoal > impressionsEstimated) {
+                JOptionPane.showMessageDialog(this, "L'impressions goal dev'essere inferiore o uguale rispetto alla capacità massima", "Errore", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
             if (cpm <= 0 && impressionsGoal <= 0) {
                 JOptionPane.showMessageDialog(this, "CPM e Impressions Goal devono essere maggiori di zero.", "Errore", JOptionPane.ERROR_MESSAGE);
@@ -167,20 +244,19 @@ public class ReportToolGui extends JFrame {
                 }
 
                 List<String> dataLines = ProjectionHandler
-                        .generateData(start, end, cpm, impressionsGoal, screens);
+                        .generateData(start, end, cpm, impressionsEstimated, impressionsGoal, screens, creativeList);
 
                 List<String> infoLines = List.of(
-                        "Report Generato il: ;" + LocalDate.now(),
+                        "Report Generato il: ;" + LocalDateTime.now(),
                         "Campagna: ;" + campaignNameText,
                         "CPM: ;" + cpm,
                         "Impressions Goal: ;" + impressionsGoal,
-                        "Schermi: ;" + String.join(";", screens),
-                        "Creative: ;" + String.join(";", CSVLoader.getInstance().getCreatives())
+                        "Creative: ;" + String.join(";", creativeList)
                 );
 
                 String headerLine = "Date;Screen;Creative;Impressions;Spend";
 
-                MessageCode code = ExcelHandler.writeExcelWithInfo(
+                MessageCode code = ExcelHandler.writeExcel(
                         campaignNameText,
                         infoLines,
                         headerLine,
@@ -199,6 +275,7 @@ public class ReportToolGui extends JFrame {
 
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Impossibile convertire cpm e impressions", "Errore", JOptionPane.ERROR_MESSAGE);
+            throw new RuntimeException(e);
         }
     }
 
