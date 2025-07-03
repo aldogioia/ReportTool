@@ -26,7 +26,7 @@ public class ImpressionsDistributor {
 
         double[] quotas = new double[n];
         Long[] floorValues = new Long[n];
-        int allocated = 0;
+        long allocated = 0;
 
         for (int i = 0; i < n; i++) {
             quotas[i] = dailyImpressions * (weights[i] / totalWeight);
